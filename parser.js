@@ -67,11 +67,13 @@ async function parseResume(filePath) {
           .join('\n')
           .trim();
 
-        console.log('✅ Fallback used. Final text:', finalText);
+        console.log('✅ Fallback used. Final text:');
       } else {
         console.warn('⚠️ Fallback extraction failed: No valid "data" array.');
       }
     }
+
+      console.log(finalText);
   } catch (err) {
     console.error('❌ Error parsing PDF:', err.message);
     return null;

@@ -1,4 +1,3 @@
-#extract.py
 import sys
 import json
 from pdfminer.high_level import extract_pages
@@ -8,8 +7,7 @@ def extract_pdf_layout(pdf_path):
     extracted_data = []
     page_heights = []
 
-    for page_layout in extract_pages(pdf_path):
-        # Get page height from LTPage object
+    for page_num, page_layout in enumerate(extract_pages(pdf_path)):
         if isinstance(page_layout, LTPage):
             page_height = page_layout.height
             page_heights.append(page_height)
@@ -21,7 +19,6 @@ def extract_pdf_layout(pdf_path):
                         line_text = text_line.get_text().strip()
                         if not line_text:
                             continue
-                        # Get max font size in this line and font names
                         font_sizes = []
                         fonts = set()
                         for char in text_line:
@@ -31,7 +28,6 @@ def extract_pdf_layout(pdf_path):
                         font_size = max(font_sizes) if font_sizes else 0
                         fonts = list(fonts)
 
-                        # Position of line (approximate)
                         x0, y0, x1, y1 = text_line.bbox
 
                         extracted_data.append({
@@ -41,10 +37,10 @@ def extract_pdf_layout(pdf_path):
                             'x1': x1,
                             'y1': y1,
                             'font_size': font_size,
-                            'fonts': fonts
+                            'fonts': fonts,
+                            'page': page_num  # 👈 Add this line
                         })
 
-    # Assume single page PDF or return max height of first page
     actual_page_height = page_heights[0] if page_heights else 1000
 
     return extracted_data, actual_page_height
@@ -56,7 +52,6 @@ if __name__ == "__main__":
 
     pdf_path = sys.argv[1]
     data, page_height = extract_pdf_layout(pdf_path)
-    # Output JSON with data and page height so name.py can use it
     print(json.dumps({
         'page_height': page_height,
         'data': data

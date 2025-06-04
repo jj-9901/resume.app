@@ -1,9 +1,39 @@
-// parser.js
 
 const fs = require('fs');
 const path = require('path');
 const pdfParse = require('pdf-parse');
 const { execFile } = require('child_process');
+
+
+
+// Function to print text in blocks separated by blank lines
+function printTextBlocks(text) {
+  console.log('\n📄 Text Blocks:\n-------------------');
+  const blocks = text.split(/\n\s*\n/); // Split by two or more newlines
+  blocks.forEach((block, index) => {
+    const trimmed = block.trim();
+    if (trimmed.length > 0) {
+      console.log(`\n🔹 Block ${index + 1}:\n${trimmed}`);
+    }
+  });
+}
+
+function printExtractedBlocks(extractedData) {
+  const blocks = {};
+
+  extractedData.forEach(line => {
+    const blockId = line.block || 0;
+    if (!blocks[blockId]) blocks[blockId] = [];
+    blocks[blockId].push(line.text);
+  });
+
+  console.log('\n📄 Extracted Blocks:\n-------------------');
+  Object.entries(blocks).forEach(([blockId, texts]) => {
+    console.log(`\n🔹 Block ${blockId}:\n${texts.join('\n')}`);
+  });
+}
+
+
 
 // Run extract.py to get detailed PDF info object
 const extractPdfData = (pdfFilePath) => {
@@ -45,6 +75,54 @@ const getNameFromExtractedData = (extractedData) => {
   });
 };
 
+
+
+// Add to parser.js near where you call name.py
+
+const getSkillsFromExtractedData = (extractedData) => {
+  return new Promise((resolve) => {
+    const skillsPath = path.join(__dirname, 'skills.py');
+    const jsonStr = JSON.stringify(extractedData);
+
+    execFile('python', [skillsPath, jsonStr], (error, stdout, stderr) => {
+      if (error) {
+        console.error('❌ skills.py error:', error.message);
+        return resolve([]);
+      }
+
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (e) {
+        console.error('❌ Failed to parse skills JSON:', e.message);
+        resolve([]);
+      }
+    });
+  });
+};
+
+
+const getExperienceFromExtractedData = (extractedData) => {
+  return new Promise((resolve) => {
+    const experiencePath = path.join(__dirname, 'experience.py');
+    const jsonStr = JSON.stringify(extractedData);
+
+    execFile('python', [experiencePath, jsonStr], (error, stdout, stderr) => {
+      if (error) {
+        console.error('❌ experience.py error:', error.message);
+        return resolve({});
+      }
+
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (e) {
+        console.error('❌ Failed to parse experience JSON:', e.message);
+        resolve({});
+      }
+    });
+  });
+};
+
+
 // Main function to parse a resume PDF
 async function parseResume(filePath) {
   let finalText = '';
@@ -53,6 +131,7 @@ async function parseResume(filePath) {
   try {
     const dataBuffer = fs.readFileSync(filePath);
     const pdfData = await pdfParse(dataBuffer);
+    
     finalText = pdfData.text;
 
     // Run extract.py for structured fallback data
@@ -74,6 +153,10 @@ async function parseResume(filePath) {
     }
 
       console.log(finalText);
+      console.log("BLOCKS");
+      printExtractedBlocks(extractedData.data);
+      // printTextBlocks(finalText);
+
   } catch (err) {
     console.error('❌ Error parsing PDF:', err.message);
     return null;
@@ -89,12 +172,16 @@ async function parseResume(filePath) {
 
   // Get name from extracted data
   const name = extractedData ? await getNameFromExtractedData(extractedData) : null;
+  const skills = extractedData ? await getSkillsFromExtractedData(extractedData) : [];
+  const experience = extractedData ? await getExperienceFromExtractedData(extractedData) : [];
 
   // Parsed resume data
   const parsedData = {
     name: name || null,
     email: emailMatch ? emailMatch[0] : null,
     phone: phoneMatch ? phoneMatch[0] : null,
+    skills: skills,
+    experience: experience
   };
 
   // Delete file after processing

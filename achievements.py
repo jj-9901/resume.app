@@ -7,37 +7,69 @@ class AchievementsExtractor:
     def __init__(self):
         self.achievement_headings = {
             'awards', 'achievements', 'award and achievements',
-            'honors', 'recognition', 'accomplishments'
+            'honors', 'recognition', 'accomplishments',
+            'awards/achievements'  # Added this pattern
         }
         self.ignore_phrases = {
             'skills', 'education', 'projects', 'experience',
             'certifications', 'references'
         }
-        self.bullet_or_numbered_pattern = re.compile(r'^[-•\d\)]{1,3}\s+')
+        self.bullet_or_numbered_pattern = re.compile(r'^(\d+\.\s+|[-•*]\s+)')
+        self.achievement_pattern = re.compile(
+            r'(1st|2nd|3rd|\d+th)\s+prize|finalist|award|honor|achievement',
+            re.IGNORECASE
+        )
 
     def is_achievement_heading(self, text):
         text_lower = text.lower().strip(".:- ")
-        return any(heading == text_lower for heading in self.achievement_headings)
+        return any(heading in text_lower for heading in self.achievement_headings)
 
     def is_ignore_heading(self, text):
         text_lower = text.lower().strip(".:- ")
-        return any(phrase == text_lower for phrase in self.ignore_phrases)
+        return any(phrase in text_lower for phrase in self.ignore_phrases)
+
+    def is_achievement_text(self, text):
+        return bool(self.achievement_pattern.search(text))
 
     def extract_achievement_blocks(self, block_texts):
         achievements = []
         current = []
-
+        in_achievements_section = False
+        max_lines = 10  # Prevent capturing too much unrelated text
+        
         for line in block_texts:
             line = line.strip()
             if not line:
                 continue
 
-            # Start new item if it's a bullet or numbered list or we collected too much
-            if self.bullet_or_numbered_pattern.match(line) or len(current) >= 2:
+            # Check if this line starts the achievements section
+            if not in_achievements_section and self.is_achievement_heading(line):
+                in_achievements_section = True
+                continue
+            
+            # Skip if we're not in achievements section yet
+            if not in_achievements_section:
+                continue
+                
+            # Check if we've hit another section
+            if self.is_ignore_heading(line):
+                break
+                
+            # If it's a bullet/numbered item or looks like an achievement
+            if (self.bullet_or_numbered_pattern.match(line) or 
+                self.is_achievement_text(line)):
+                if current:  # Save previous achievement if exists
+                    achievements.append({"description": " ".join(current)})
+                    current = []
+            
+            current.append(line)
+            
+            # Prevent collecting too much unrelated text
+            if len(current) >= max_lines:
                 if current:
                     achievements.append({"description": " ".join(current)})
                     current = []
-            current.append(line)
+                break
 
         if current:
             achievements.append({"description": " ".join(current)})
@@ -54,12 +86,11 @@ class AchievementsExtractor:
             if self.is_achievement_heading(item['text']):
                 self.achievement_block_id = block_id
 
+        # If no explicit heading found, look for block with achievement-like text
         if self.achievement_block_id is None:
             for block_id, texts in blocks.items():
                 for text in texts:
-                    text_lower = text.lower()
-                    if any(head in text_lower for head in self.achievement_headings) and \
-                       not any(ignore in text_lower for ignore in self.ignore_phrases):
+                    if self.is_achievement_text(text):
                         self.achievement_block_id = block_id
                         break
                 if self.achievement_block_id is not None:
@@ -67,8 +98,14 @@ class AchievementsExtractor:
 
         if self.achievement_block_id is not None:
             extracted = self.extract_achievement_blocks(blocks[self.achievement_block_id])
+            # Filter out very short or non-achievement items
+            filtered = [
+                item for item in extracted 
+                if (len(item['description'].split()) >= 3 and 
+                    self.is_achievement_text(item['description']))
+            ]
             formatted = {}
-            for i, item in enumerate(extracted, 1):
+            for i, item in enumerate(filtered, 1):
                 formatted[f"achievement_{i}"] = item
             return formatted
 
@@ -87,8 +124,8 @@ if __name__ == "__main__":
         achievements = extractor.process_data(data)
 
         result = {
-        "achievements": achievements,
-        "used_block": extractor.achievement_block_id  # This is an integer or None
+            "achievements": achievements,
+            "used_block": extractor.achievement_block_id
         }
         print(json.dumps(result))
 

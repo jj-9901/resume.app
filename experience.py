@@ -80,30 +80,30 @@ class ExperienceExtractor:
 
     def process_data(self, data):
         blocks = defaultdict(list)
-        experience_block_id = None
+        self.experience_block_id = None
         
         # First pass: find all blocks and identify the experience block
         for item in data:
             block_id = item.get('block', 0)
             blocks[block_id].append(item['text'])
             if self.is_experience_heading(item['text']):
-                experience_block_id = block_id
+                self.experience_block_id = block_id
 
         # Second pass: if no exact match, look for partial matches
-        if experience_block_id is None:
+        if self.experience_block_id is None:
             for block_id, texts in blocks.items():
                 for text in texts:
                     text_lower = text.lower()
                     if ('experience' in text_lower or 'employment' in text_lower) and \
                        not any(ignore in text_lower for ignore in self.ignore_phrases):
-                        experience_block_id = block_id
+                        self.experience_block_id = block_id
                         break
-                if experience_block_id is not None:
+                if self.experience_block_id is not None:
                     break
 
         # If we found an experience block, extract its contents
-        if experience_block_id is not None:
-            experiences = self.extract_experience_blocks(blocks[experience_block_id])
+        if self.experience_block_id is not None:
+            experiences = self.extract_experience_blocks(blocks[self.experience_block_id])
             
             # Format the experiences with sequential numbers
             formatted_experiences = {}
@@ -126,7 +126,12 @@ if __name__ == "__main__":
         experiences = extractor.process_data(data)
 
         # Output a valid JSON object of experiences
-        print(json.dumps(experiences))
+        result = {
+        "experience": experiences,
+        "used_block": extractor.experience_block_id  # This is an integer or None
+        }
+        print(json.dumps(result))
+
     except Exception as e:
         print(f"Error processing experiences: {str(e)}", file=sys.stderr)
         sys.exit(1)

@@ -68,26 +68,26 @@ class EducationExtractor:
 
     def process_data(self, data):
         blocks = defaultdict(list)
-        education_block_id = None
+        self.education_block_id = None
 
         for item in data:
             block_id = item.get('block', 0)
             blocks[block_id].append(item['text'])
             if self.is_education_heading(item['text']):
-                education_block_id = block_id
+                self.education_block_id = block_id
 
-        if education_block_id is None:
+        if self.education_block_id is None:
             for block_id, texts in blocks.items():
                 for text in texts:
                     text_lower = text.lower()
                     if 'education' in text_lower and not any(ignore in text_lower for ignore in self.ignore_phrases):
-                        education_block_id = block_id
+                        self.education_block_id = block_id
                         break
-                if education_block_id is not None:
+                if self.education_block_id is not None:
                     break
 
-        if education_block_id is not None:
-            educations = self.extract_education_blocks(blocks[education_block_id])
+        if self.education_block_id is not None:
+            educations = self.extract_education_blocks(blocks[self.education_block_id])
             
             formatted_educations = {}
             for i, edu in enumerate(educations, 1):
@@ -108,7 +108,12 @@ if __name__ == "__main__":
         extractor = EducationExtractor()
         educations = extractor.process_data(data)
 
-        print(json.dumps(educations))
+        result = {
+        "education": educations,
+        "used_block": extractor.education_block_id  # This is an integer or None
+        }
+        print(json.dumps(result))
+
     except Exception as e:
         print(f"Error processing education: {str(e)}", file=sys.stderr)
         sys.exit(1)

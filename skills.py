@@ -53,7 +53,7 @@ class SkillsExtractor:
     def process_data(self, data):
         """Find the block with a skill heading and extract its contents"""
         blocks = defaultdict(list)
-        skill_block_id = None
+        self.skill_block_id = None
         
         # First pass: find all blocks and identify the skill block
         for item in data:
@@ -61,21 +61,21 @@ class SkillsExtractor:
             blocks[block_id].append(item['text'])
             # Check if this line is a skill heading
             if self.is_skill_heading(item['text']):
-                skill_block_id = block_id
+                self.skill_block_id = block_id
 
         # Second pass: if no exact match, look for partial matches
-        if skill_block_id is None:
+        if self.skill_block_id is None:
             for block_id, texts in blocks.items():
                 for text in texts:
                     if 'skill' in text.lower() and not any(ignore in text.lower() for ignore in self.ignore_phrases):
-                        skill_block_id = block_id
+                        self.skill_block_id = block_id
                         break
-                if skill_block_id is not None:
+                if self.skill_block_id is not None:
                     break
 
         # If we found a skill block, extract its skills
-        if skill_block_id is not None:
-            skills = self.extract_skills_from_block(blocks[skill_block_id])
+        if self.skill_block_id is not None:
+            skills = self.extract_skills_from_block(blocks[self.skill_block_id])
             # Filter out any remaining section headers that might have slipped through
             return [s for s in skills if not self.is_ignore_heading(s)]
         return []
@@ -93,7 +93,13 @@ if __name__ == "__main__":
         skills = extractor.process_data(data)
 
         # Output a valid JSON list of skills
-        print(json.dumps(skills))
+        # Final result with one used block ID
+        result = {
+            "skills": skills,
+            "used_block": extractor.skill_block_id  # This is an integer or None
+        }
+        print(json.dumps(result))
+
     except Exception as e:
         print(f"Error processing skills: {str(e)}", file=sys.stderr)
         sys.exit(1)

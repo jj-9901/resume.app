@@ -46,27 +46,27 @@ class AchievementsExtractor:
 
     def process_data(self, data):
         blocks = defaultdict(list)
-        achievement_block_id = None
+        self.achievement_block_id = None
 
         for item in data:
             block_id = item.get('block', 0)
             blocks[block_id].append(item['text'])
             if self.is_achievement_heading(item['text']):
-                achievement_block_id = block_id
+                self.achievement_block_id = block_id
 
-        if achievement_block_id is None:
+        if self.achievement_block_id is None:
             for block_id, texts in blocks.items():
                 for text in texts:
                     text_lower = text.lower()
                     if any(head in text_lower for head in self.achievement_headings) and \
                        not any(ignore in text_lower for ignore in self.ignore_phrases):
-                        achievement_block_id = block_id
+                        self.achievement_block_id = block_id
                         break
-                if achievement_block_id is not None:
+                if self.achievement_block_id is not None:
                     break
 
-        if achievement_block_id is not None:
-            extracted = self.extract_achievement_blocks(blocks[achievement_block_id])
+        if self.achievement_block_id is not None:
+            extracted = self.extract_achievement_blocks(blocks[self.achievement_block_id])
             formatted = {}
             for i, item in enumerate(extracted, 1):
                 formatted[f"achievement_{i}"] = item
@@ -86,7 +86,12 @@ if __name__ == "__main__":
         extractor = AchievementsExtractor()
         achievements = extractor.process_data(data)
 
-        print(json.dumps(achievements))
+        result = {
+        "achievements": achievements,
+        "used_block": extractor.achievement_block_id  # This is an integer or None
+        }
+        print(json.dumps(result))
+
     except Exception as e:
         print(f"Error processing achievements: {str(e)}", file=sys.stderr)
         sys.exit(1)

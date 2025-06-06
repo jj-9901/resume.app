@@ -78,7 +78,6 @@ const getNameFromExtractedData = (extractedData) => {
 
 
 // Add to parser.js near where you call name.py
-
 const getSkillsFromExtractedData = (extractedData) => {
   return new Promise((resolve) => {
     const skillsPath = path.join(__dirname, 'skills.py');
@@ -87,19 +86,22 @@ const getSkillsFromExtractedData = (extractedData) => {
     execFile('python', [skillsPath, jsonStr], (error, stdout, stderr) => {
       if (error) {
         console.error('❌ skills.py error:', error.message);
-        return resolve([]);
+        return resolve({ skills: [], used_block: null });
       }
 
       try {
-        resolve(JSON.parse(stdout));
+        const result = JSON.parse(stdout);
+        resolve({
+          skills: result.skills || [],
+          used_block: result.used_block ?? null
+        });
       } catch (e) {
         console.error('❌ Failed to parse skills JSON:', e.message);
-        resolve([]);
+        resolve({ skills: [], used_block: null });
       }
     });
   });
 };
-
 
 const getExperienceFromExtractedData = (extractedData) => {
   return new Promise((resolve) => {
@@ -109,20 +111,22 @@ const getExperienceFromExtractedData = (extractedData) => {
     execFile('python', [experiencePath, jsonStr], (error, stdout, stderr) => {
       if (error) {
         console.error('❌ experience.py error:', error.message);
-        return resolve({});
+        return resolve({ experience: [], used_block: null });
       }
 
       try {
-        resolve(JSON.parse(stdout));
+        const result = JSON.parse(stdout);
+        resolve({
+          experience: result.experience || [],
+          used_block: result.used_block ?? null
+        });
       } catch (e) {
         console.error('❌ Failed to parse experience JSON:', e.message);
-        resolve({});
+        resolve({ experience: [], used_block: null });
       }
     });
   });
 };
-
-
 const getEducationFromExtractedData = (extractedData) => {
   return new Promise((resolve) => {
     const educationPath = path.join(__dirname, 'education.py');
@@ -131,20 +135,22 @@ const getEducationFromExtractedData = (extractedData) => {
     execFile('python', [educationPath, jsonStr], (error, stdout, stderr) => {
       if (error) {
         console.error('❌ education.py error:', error.message);
-        return resolve({});
+        return resolve({ education: [], used_block: null });
       }
 
       try {
-        resolve(JSON.parse(stdout));
+        const result = JSON.parse(stdout);
+        resolve({
+          education: result.education || [],
+          used_block: result.used_block ?? null
+        });
       } catch (e) {
         console.error('❌ Failed to parse education JSON:', e.message);
-        resolve({});
+        resolve({ education: [], used_block: null });
       }
     });
   });
 };
-
-
 const getProjectsFromExtractedData = (extractedData) => {
   return new Promise((resolve) => {
     const projectsPath = path.join(__dirname, 'projects.py');
@@ -153,20 +159,22 @@ const getProjectsFromExtractedData = (extractedData) => {
     execFile('python', [projectsPath, jsonStr], (error, stdout, stderr) => {
       if (error) {
         console.error('❌ projects.py error:', error.message);
-        return resolve({});
+        return resolve({ projects: [], used_block: null });
       }
 
       try {
-        resolve(JSON.parse(stdout));
+        const result = JSON.parse(stdout);
+        resolve({
+          projects: result.projects || [],
+          used_block: result.used_block ?? null
+        });
       } catch (e) {
         console.error('❌ Failed to parse projects JSON:', e.message);
-        resolve({});
+        resolve({ projects: [], used_block: null });
       }
     });
   });
 };
-
-
 const getAchievementsFromExtractedData = (extractedData) => {
   return new Promise((resolve) => {
     const achievementsPath = path.join(__dirname, 'achievements.py');
@@ -175,28 +183,33 @@ const getAchievementsFromExtractedData = (extractedData) => {
     execFile('python', [achievementsPath, jsonStr], (error, stdout, stderr) => {
       if (error) {
         console.error('❌ achievements.py error:', error.message);
-        return resolve({});
+        return resolve({ achievements: [], used_block: null });
       }
 
       try {
-        resolve(JSON.parse(stdout));
+        const result = JSON.parse(stdout);
+        resolve({
+          achievements: result.achievements || [],
+          used_block: result.used_block ?? null
+        });
       } catch (e) {
         console.error('❌ Failed to parse achievements JSON:', e.message);
-        resolve({});
+        resolve({ achievements: [], used_block: null });
       }
     });
   });
 };
 
 
-// Add this function to parser.js (place it with the other similar functions)
-const getExtraInfoFromExtractedData = (extractedData, usedKeys) => {
+
+
+const getExtraFromExtractedData = (extractedData, usedBlockSet = []) => {
   return new Promise((resolve) => {
     const extraPath = path.join(__dirname, 'extra.py');
-    const jsonStr = JSON.stringify(extractedData);
-    const usedKeysStr = JSON.stringify(usedKeys);
+    const jsonStr = JSON.stringify(extractedData || {});
+    const usedBlocksStr = JSON.stringify([...usedBlockSet]);
 
-    execFile('python', [extraPath, jsonStr, usedKeysStr], (error, stdout, stderr) => {
+    execFile('python', [extraPath, jsonStr, usedBlocksStr], (error, stdout, stderr) => {
       if (error) {
         console.error('❌ extra.py error:', error.message);
         return resolve({});
@@ -205,13 +218,12 @@ const getExtraInfoFromExtractedData = (extractedData, usedKeys) => {
       try {
         resolve(JSON.parse(stdout));
       } catch (e) {
-        console.error('❌ Failed to parse extra info JSON:', e.message);
+        console.error('❌ Failed to parse extra JSON:', e.message);
         resolve({});
       }
     });
   });
 };
-
 
 
 // Main function to parse a resume PDF
@@ -227,6 +239,9 @@ async function parseResume(filePath) {
 
     // Run extract.py for structured fallback data
     extractedData = await extractPdfData(filePath);
+    
+    const usedBlockSet = new Set();
+
 
     // If the extracted text is too short, use fallback
     if (!finalText || finalText.trim().length < 10) {
@@ -283,31 +298,35 @@ async function parseResume(filePath) {
     if (matchedPhone) phoneMatch = matchedPhone;
   }
 
+  const usedBlockSet = new Set();
 
-  
-// Update the parseResume function (replace the final part where parsedData is created)
-  // Get all the parsed data
-  const name = extractedData ? await getNameFromExtractedData(extractedData) : null;
-  const skills = extractedData ? await getSkillsFromExtractedData(extractedData) : [];
-  const experience = extractedData ? await getExperienceFromExtractedData(extractedData) : [];
-  const projects = extractedData ? await getProjectsFromExtractedData(extractedData) : [];
-  const education = extractedData ? await getEducationFromExtractedData(extractedData) : [];
-  const achievements = extractedData ? await getAchievementsFromExtractedData(extractedData) : [];
 
-  // Track all the keys we've already used
-  const usedKeys = [
-    ...(name ? ['name'] : []),
-    ...(skills.length ? ['skills'] : []),
-    ...(experience.length ? ['experience'] : []),
-    ...(projects.length ? ['projects'] : []),
-    ...(education.length ? ['education'] : []),
-    ...(achievements.length ? ['achievements'] : []),
-    ...(emailMatch ? ['email'] : []),
-    ...(phoneMatch ? ['phone'] : [])
-  ];
+  const name = extractedData ? await getNameFromExtractedData(extractedData): null;
+  const skillResult = extractedData ? await getSkillsFromExtractedData(extractedData) : { skills: [], used_block: null };
+  const skills = skillResult.skills;
+  if (skillResult.used_block !== null) usedBlockSet.add(skillResult.used_block);
 
-  // Get any remaining info not captured by other extractors
-  const extraInfo = extractedData ? await getExtraInfoFromExtractedData(extractedData, usedKeys) : {};
+  const educationResult = extractedData ? await getEducationFromExtractedData(extractedData) : { education: [], used_block: null };
+  const education = educationResult.education;
+  if (educationResult.used_block !== null) usedBlockSet.add(educationResult.used_block);
+
+  const experienceResult = extractedData ? await getExperienceFromExtractedData(extractedData) : { experience: [], used_block: null };
+  const experience = experienceResult.experience;
+  if (experienceResult.used_block !== null) usedBlockSet.add(experienceResult.used_block);
+
+  const projectsResult = extractedData ? await getProjectsFromExtractedData(extractedData) : { projects: [], used_block: null };
+  const projects = projectsResult.projects;
+  if (projectsResult.used_block !== null) usedBlockSet.add(projectsResult.used_block);
+
+  const achievementsResult = extractedData ? await getAchievementsFromExtractedData(extractedData) : { achievements: [], used_block: null };
+  const achievements = achievementsResult.achievements;
+  if (achievementsResult.used_block !== null) usedBlockSet.add(achievementsResult.used_block);
+
+// Assuming usedBlockSet is a Set containing block numbers already used
+const otherInfo = extractedData
+  ? await getExtraFromExtractedData(extractedData, usedBlockSet)
+  : {};
+
 
   // Parsed resume data
   const parsedData = {
@@ -319,7 +338,7 @@ async function parseResume(filePath) {
     experience: experience,
     projects: projects,
     achievements: achievements,
-    ...extraInfo  // Include any additional info
+    otherInfo: otherInfo
   };
 
   // Delete file after processing

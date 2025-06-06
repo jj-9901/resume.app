@@ -88,30 +88,30 @@ class ProjectsExtractor:
 
     def process_data(self, data):
         blocks = defaultdict(list)
-        project_block_id = None
+        self.project_block_id = None
         
         # First pass: find all blocks and identify the project block
         for item in data:
             block_id = item.get('block', 0)
             blocks[block_id].append(item['text'])
             if self.is_project_heading(item['text']):
-                project_block_id = block_id
+                self.project_block_id = block_id
 
         # Second pass: if no exact match, look for partial matches
-        if project_block_id is None:
+        if self.project_block_id is None:
             for block_id, texts in blocks.items():
                 for text in texts:
                     text_lower = text.lower()
                     if ('project' in text_lower or 'research' in text_lower) and \
                        not any(ignore in text_lower for ignore in self.ignore_phrases):
-                        project_block_id = block_id
+                        self.project_block_id = block_id
                         break
-                if project_block_id is not None:
+                if self.project_block_id is not None:
                     break
 
         # If we found a project block, extract its contents
-        if project_block_id is not None:
-            projects = self.extract_project_blocks(blocks[project_block_id])
+        if self.project_block_id is not None:
+            projects = self.extract_project_blocks(blocks[self.project_block_id])
             
             # Format the projects with sequential numbers
             formatted_projects = {}
@@ -138,7 +138,12 @@ if __name__ == "__main__":
         projects = extractor.process_data(data)
 
         # Output a valid JSON object of projects
-        print(json.dumps(projects))
+        result = {
+        "projects": projects,
+        "used_block": extractor.project_block_id  # This is an integer or None
+        }
+        print(json.dumps(result))
+
     except Exception as e:
         print(f"Error processing projects: {str(e)}", file=sys.stderr)
         sys.exit(1)

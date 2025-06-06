@@ -9,55 +9,43 @@ COMMON_HEADINGS = {
     'references', 'about', 'personal information'
 }
 
-ALREADY_USED = set()  # Will be filled from CLI
-
-def normalize(text):
-    return text.strip().lower().strip(":.- ")
+USED_BLOCKS = set()
 
 def get_other_info(data):
     blocks = defaultdict(list)
-    headings = {}
-
     for item in data:
         block_id = item.get("block", 0)
-        blocks[block_id].append(item["text"])
-        score = item.get("heading_score", 0)
-        if score >= 2:
-            headings[block_id] = normalize(item["text"])
+        blocks[block_id].append(item)
 
     other_info = {}
-
-    for block_id, lines in blocks.items():
-        heading = headings.get(block_id, "")
-        if heading in COMMON_HEADINGS or heading in ALREADY_USED:
+    for block_id, items in blocks.items():
+        if block_id in USED_BLOCKS:
             continue
 
-        if not heading and block_id in headings:
-            heading = headings[block_id]
+        clean_raw = []
 
-        # Give default heading if not available
-        heading = heading or f"section_{block_id}"
-        heading_key = heading.replace(" ", "_")
+        for item in items:
+            text = item.get('text', '').strip()
+            if not text:
+                continue
 
-        # Skip completely empty or already extracted content
-        clean_lines = [line.strip() for line in lines if line.strip()]
-        if not clean_lines:
-            continue
+            clean_raw.append(text)
 
-        other_info[heading_key] = clean_lines
+        if clean_raw:
+            # Just assign the list directly to the block key, no extra keys like 'raw'
+            other_info[f"section_{block_id}"] = clean_raw
 
     return {"other_info": other_info} if other_info else {}
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python extra.py '<json_string>' '<used_keys_json>'", file=sys.stderr)
+        print("Usage: python extra.py '<extracted_data_json>' '<used_blocks_json>'", file=sys.stderr)
         sys.exit(1)
 
     try:
         input_data = json.loads(sys.argv[1])
-        used_keys = json.loads(sys.argv[2])
-
-        ALREADY_USED.update(k.lower() for k in used_keys)
+        used_blocks = json.loads(sys.argv[2])
+        USED_BLOCKS.update(used_blocks)
 
         data = input_data["data"] if isinstance(input_data, dict) and "data" in input_data else input_data
         result = get_other_info(data)

@@ -9,7 +9,7 @@ HEADING_KEYWORDS = {
     "projects", "certifications", "languages", "details", "hobbies", 
     "extra-curricular activities", "summary", "work experience",
     "technical skills", "professional experience", "academic background", 
-    "awards", "achievements", "contact", "references", "publications", "award and achievementser"
+    "awards", "achievements", "contact", "references", "publications", "award and achievementser","employment","jobs"
 }
 
 DATE_PATTERNS = [

@@ -8,7 +8,7 @@ class ProjectsExtractor:
         self.project_headings = {
             'projects', 'personal projects', 'academic projects',
             'project experience', 'selected projects', 'project portfolio',
-            'research projects', 'technical projects'
+            'research projects', 'technical projects', 'project', 'project details', 'professional projects'
         }
         self.ignore_phrases = {
             'experience', 'education', 'hobbies', 'work',

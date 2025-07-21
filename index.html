@@ -1,4 +1,4 @@
-<!-- index.html---->
+<!-- index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,4 +12,65 @@
     <button type="submit">Upload</button>
   </form>
 </body>
+</html> --->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Resume Upload</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    form { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Upload Resume(s)</h1>
+
+  <form id="uploadForm" action="/upload-resumes" method="POST" enctype="multipart/form-data">
+  <label>Upload individual PDFs:</label><br>
+  <input id="fileInput" type="file" name="files" accept=".pdf" multiple><br>
+  <button type="button" id="addMoreBtn">+ Add More Files</button><br><br>
+
+  <label>OR upload a ZIP of PDFs:</label><br>
+  <input type="file" name="zip" accept=".zip"><br><br>
+
+  <button type="submit">Upload and Parse</button>
+</form>
+
+</body>
 </html>
+
+<script>
+  const input = document.getElementById("fileInput");
+  const addMoreBtn = document.getElementById("addMoreBtn");
+
+  let storedFiles = new DataTransfer();
+
+  input.addEventListener("change", (e) => {
+    for (const file of input.files) {
+      storedFiles.items.add(file);
+    }
+    input.files = storedFiles.files;
+  });
+
+  addMoreBtn.addEventListener("click", () => {
+    const newInput = document.createElement("input");
+    newInput.type = "file";
+    newInput.accept = ".pdf";
+    newInput.multiple = true;
+    newInput.style.display = "none";
+
+    newInput.addEventListener("change", (e) => {
+      for (const file of newInput.files) {
+        storedFiles.items.add(file);
+      }
+      input.files = storedFiles.files;
+    });
+
+    document.body.appendChild(newInput);
+    newInput.click();
+  });
+</script>
+

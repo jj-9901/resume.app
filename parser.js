@@ -342,9 +342,9 @@ const otherInfo = extractedData
   };
 
   // Delete file after processing
-  fs.unlink(filePath, (err) => {
-    if (err) console.error('⚠️ Failed to delete file:', err.message);
-  });
+  // fs.unlink(filePath, (err) => {
+  //   if (err) console.error('⚠️ Failed to delete file:', err.message);
+  // });
 
   return parsedData;
 }

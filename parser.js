@@ -45,6 +45,8 @@ const extractPdfData = (pdfFilePath) => {
         console.error('❌ extract.py error:', error.message);
         return resolve(null);
       }
+       console.log('📤 STDOUT from extract.py:', stdout);
+      console.log('⚠️ STDERR from extract.py:', stderr);
 
       try {
         const data = JSON.parse(stdout);
